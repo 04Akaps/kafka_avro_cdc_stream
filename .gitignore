@@ -1,0 +1,17 @@
+*.class
+*.log
+*.jar
+*.war
+
+.gradle
+build/
+
+target/
+
+.idea/
+*.iml
+out/
+
+.vscode/
+
+.DS_Store
