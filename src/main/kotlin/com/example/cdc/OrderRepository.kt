@@ -5,30 +5,13 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Repository
-interface OrderRepository : JpaRepository<OrderEntity, String> {
-    
-    fun findByCustomerId(customerId: String): List<OrderEntity>
-    
-    fun findByStatus(status: OrderStatus): List<OrderEntity>
-    
-    fun findByCustomerIdAndStatus(customerId: String, status: OrderStatus): List<OrderEntity>
-    
-    @Modifying
-    @Transactional
-    @Query("UPDATE OrderEntity o SET o.status = :newStatus, o.updatedAt = CURRENT_TIMESTAMP WHERE o.orderId IN :orderIds")
-    fun updateOrdersStatus(@Param("orderIds") orderIds: List<String>, @Param("newStatus") newStatus: OrderStatus): Int
-    
-    @Query("SELECT COUNT(o) FROM OrderEntity o WHERE o.status = :status")
-    fun countByStatus(@Param("status") status: OrderStatus): Long
-    
-    @Query("SELECT SUM(o.price * o.quantity) FROM OrderEntity o WHERE o.customerId = :customerId")
-    fun getTotalAmountByCustomer(@Param("customerId") customerId: String): java.math.BigDecimal?
-}
+interface OrderRepository : JpaRepository<OrderEntity, String>
 
-@org.springframework.stereotype.Service
+@Service
 @Transactional
 class OrderCdcService(
     private val orderRepository: OrderRepository
