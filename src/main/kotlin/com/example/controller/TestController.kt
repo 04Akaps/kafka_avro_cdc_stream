@@ -38,19 +38,29 @@ class TestController(
     }
 
 
-    @PostMapping("/avro/publish")
-    fun publishAvroEvent(@RequestBody request: TestOrderRequest): ResponseEntity<String> {
+     @PostMapping("/avro/publish")
+    fun createOrder(
+        @RequestParam(defaultValue = "CUST-123") customerId: String,
+        @RequestParam(defaultValue = "5") quantity: Int,
+        @RequestParam(defaultValue = "99.99") price: BigDecimal
+    ): Map<String, Any> {
+        
+        val orderId = UUID.randomUUID().toString()
+        
         avroOrderEventProducer.publishOrderEvent(
-            orderId = request.orderId,
-            customerId = request.customerId,
-            quantity = request.quantity,
-            price = request.price,
-            schema = schemaManager.getOrderEventSchema()
+            orderId = orderId,
+            customerId = customerId,
+            quantity = quantity,
+            price = price
         )
         
-        return ResponseEntity.ok("Avro event published: ${request.orderId}")
+        return mapOf(
+            "success" to true,
+            "orderId" to orderId,
+            "message" to "Avro order event published successfully"
+        )
     }
-    
+
     @PostMapping("/cdc/create")
     fun createOrderForCdc(@RequestBody request: TestOrderRequest): ResponseEntity<String> {
         val savedOrder = orderCdcService.createOrder(

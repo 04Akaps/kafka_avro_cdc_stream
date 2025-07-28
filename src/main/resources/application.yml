@@ -20,11 +20,6 @@ spring:
   
   kafka:
     bootstrap-servers: localhost:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.add.type.headers: true
     streams:
       application-id: order-streams-app
       bootstrap-servers: localhost:9092
@@ -60,6 +55,10 @@ kafka:
     orders: orders
     high-value-orders: high-value-orders
     fraud-alerts: fraud-alerts
+
+schema:
+  registry:
+    url: http://localhost:8081
 
 logging:
   level:

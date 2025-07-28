@@ -9,6 +9,7 @@ import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.kstream.*
+import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.state.WindowStore
 import org.apache.kafka.common.utils.Bytes
 import org.slf4j.LoggerFactory
@@ -109,7 +110,10 @@ class OrderStreamsProcessor(
 
     private fun salesStatsStream(orderStream: KStream<String, OrderEvent>) {
         orderStream
-            .groupByKey(Grouped.with(Serdes.String(), orderEventSerde))
+            .groupBy(
+                { key, orderEvent -> orderEvent.customerId },
+                Grouped.with(Serdes.String(), orderEventSerde)
+            )
             .windowedBy(TimeWindows.of(Duration.ofHours(1)))
             .aggregate(
                 { WindowedSalesData() },

@@ -1,6 +1,5 @@
 package com.example.avro
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
@@ -14,34 +13,34 @@ import java.time.ZoneOffset
 
 @Service
 class AvroOrderEventProducer(
-    private val avroKafkaTemplate: KafkaTemplate<String, String>
+    private val avroKafkaTemplate: KafkaTemplate<String, GenericRecord>,
+    private val schemaManager: OrderEventSchemaManager
 ) {
     
     private val logger = LoggerFactory.getLogger(AvroOrderEventProducer::class.java)
-    private val objectMapper = jacksonObjectMapper()
     
     fun publishOrderEvent(
         orderId: String,
         customerId: String,
         quantity: Int,
-        price: BigDecimal,
-        schema: Schema
+        price: BigDecimal
     ) {
         try {
+            val schema = schemaManager.getOrderEventSchema()
             val avroRecord = createAvroRecord(orderId, customerId, quantity, price, schema)
-            val jsonString = convertRecordToJson(avroRecord)
             
-            avroKafkaTemplate.send("orders-avro", orderId, jsonString)
+            avroKafkaTemplate.send("orders-avro", orderId, avroRecord)
                 .whenComplete { result, ex ->
                     if (ex == null) {
-                        logger.info("Avro order event published: {}", orderId)
+                        logger.info("Avro order event published successfully: orderId={}, partition={}, offset={}", 
+                            orderId, result?.recordMetadata?.partition(), result?.recordMetadata?.offset())
                     } else {
-                        logger.error("Failed to publish Avro order event: {}", orderId, ex)
+                        logger.error("Failed to publish Avro order event: orderId={}", orderId, ex)
                     }
                 }
                 
         } catch (ex: Exception) {
-            logger.error("Error creating Avro record for order: {}", orderId, ex)
+            logger.error("Error creating Avro record for order: orderId={}", orderId, ex)
         }
     }
     
@@ -60,7 +59,7 @@ class AvroOrderEventProducer(
         record.put("customerId", customerId)
         record.put("quantity", quantity)
         record.put("price", convertPriceToBytes(price))
-        record.put("status", "PENDING")
+        record.put("status", GenericData.EnumSymbol(schema.getField("status").schema(), "PENDING"))
         record.put("createdAt", now)
         record.put("updatedAt", now)
         record.put("version", 1L)
@@ -72,24 +71,5 @@ class AvroOrderEventProducer(
         val scaled = price.setScale(2)
         val unscaledValue = scaled.unscaledValue()
         return ByteBuffer.wrap(unscaledValue.toByteArray())
-    }
-    
-    private fun convertRecordToJson(record: GenericRecord): String {
-        val map = mutableMapOf<String, Any?>()
-        
-        for (field in record.schema.fields) {
-            val value = record.get(field.name())
-            map[field.name()] = when (value) {
-                is ByteBuffer -> {
-                    val bytes = ByteArray(value.remaining())
-                    value.get(bytes)
-                    val bigInt = java.math.BigInteger(bytes)
-                    BigDecimal(bigInt, 2).toString()
-                }
-                else -> value
-            }
-        }
-        
-        return objectMapper.writeValueAsString(map)
     }
 }

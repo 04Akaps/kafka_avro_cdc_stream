@@ -1,6 +1,11 @@
 package com.example.config
 
 import com.example.model.OrderEvent
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import io.confluent.kafka.serializers.KafkaAvroSerializer
+import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -21,6 +26,10 @@ class KafkaConsumerConfig {
 
     @Value("\${spring.kafka.bootstrap-servers}")
     private lateinit var bootstrapServers: String
+    
+    companion object {
+        const val SCHEMA_REGISTRY_URL = "http://localhost:8081"
+    }
 
     @Bean
     fun orderEventConsumerFactory(): ConsumerFactory<String, OrderEvent> {
@@ -86,21 +95,7 @@ class KafkaConsumerConfig {
         return factory
     }
 
-    @Bean
-    fun avroProducerFactory(): ProducerFactory<String, String> {
-        val props = mapOf(
-            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
-            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to StringSerializer::class.java,
-            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to "org.apache.kafka.common.serialization.StringSerializer"
-        )
-        return DefaultKafkaProducerFactory(props)
-    }
-
-    @Bean
-    fun avroKafkaTemplate(): KafkaTemplate<String, String> {
-        return KafkaTemplate(avroProducerFactory())
-    }
-
+    
     @Bean
     fun orderEventProducerFactory(): ProducerFactory<String, OrderEvent> {
         val props = mapOf(
@@ -115,5 +110,47 @@ class KafkaConsumerConfig {
     @Bean
     fun kafkaTemplate(): KafkaTemplate<String, OrderEvent> {
         return KafkaTemplate(orderEventProducerFactory())
+    }
+    
+    @Bean
+    fun avroConsumerFactory(): ConsumerFactory<String, GenericRecord> {
+        val props = mapOf(
+            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
+            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to KafkaAvroDeserializer::class.java,
+            AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to SCHEMA_REGISTRY_URL,
+            KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG to false,
+            AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS to true
+        )
+        return DefaultKafkaConsumerFactory(props)
+    }
+
+    @Bean
+    fun avroKafkaListenerContainerFactory(): ConcurrentKafkaListenerContainerFactory<String, GenericRecord> {
+        val factory = ConcurrentKafkaListenerContainerFactory<String, GenericRecord>()
+        factory.consumerFactory = avroConsumerFactory()
+        return factory
+    }
+    
+    @Bean
+    fun avroProducerFactory(): ProducerFactory<String, GenericRecord> {
+        val props = mapOf(
+            ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to StringSerializer::class.java,
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to KafkaAvroSerializer::class.java,
+            AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to SCHEMA_REGISTRY_URL,
+            AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS to true,
+            ProducerConfig.ACKS_CONFIG to "1",
+            ProducerConfig.RETRIES_CONFIG to 3,
+            ProducerConfig.BATCH_SIZE_CONFIG to 16384,
+            ProducerConfig.LINGER_MS_CONFIG to 10,
+            ProducerConfig.COMPRESSION_TYPE_CONFIG to "snappy"
+        )
+        return DefaultKafkaProducerFactory(props)
+    }
+
+    @Bean
+    fun avroKafkaTemplate(): KafkaTemplate<String, GenericRecord> {
+        return KafkaTemplate(avroProducerFactory())
     }
 }

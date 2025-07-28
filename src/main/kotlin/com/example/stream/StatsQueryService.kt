@@ -29,8 +29,10 @@ class StatsQueryService(
                 )
                 
                 val now = Instant.now()
+                
                 val currentPeriodEnd = now
                 val currentPeriodStart = now.minusSeconds(300) // 5분 전
+
                 val previousPeriodEnd = currentPeriodStart
                 val previousPeriodStart = currentPeriodStart.minusSeconds(300) // 10분 전
                 

@@ -14,6 +14,9 @@ java {
 
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://packages.confluent.io/maven/")
+    }
 }
 
 dependencies {
@@ -22,6 +25,9 @@ dependencies {
     implementation("org.springframework.kafka:spring-kafka")
     implementation("org.apache.kafka:kafka-streams")
     implementation("org.apache.avro:avro:1.11.3")
+    implementation("io.confluent:kafka-avro-serializer:7.5.0")
+    implementation("io.confluent:kafka-streams-avro-serde:7.5.0")
+    implementation("io.confluent:kafka-schema-registry-client:7.5.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")

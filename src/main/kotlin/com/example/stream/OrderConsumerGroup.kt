@@ -63,10 +63,6 @@ class OrderAnalyticsConsumer {
         try {
             updateCustomerStatistics(orderEvent)
             
-            updateProductStatistics(orderEvent)
-            
-            analyzeOrderPattern(orderEvent)
-            
         } catch (ex: Exception) {
             logger.error("Failed to collect analytics for order {}: {}", 
                 orderEvent.orderId, ex.message)
@@ -76,14 +72,7 @@ class OrderAnalyticsConsumer {
     private fun updateCustomerStatistics(orderEvent: OrderEvent) {
         logger.debug("Updated customer statistics for {}", orderEvent.customerId)
     }
-    
-    private fun updateProductStatistics(orderEvent: OrderEvent) {
-        logger.debug("Updated product statistics")
-    }
-    
-    private fun analyzeOrderPattern(orderEvent: OrderEvent) {
-        logger.debug("Analyzed order pattern for {}", orderEvent.timestamp)
-    }
+
 }
 
 @Component
@@ -105,13 +94,9 @@ class OrderNotificationConsumer {
             orderEvent.orderId, partition)
         
         try {
-            sendOrderConfirmationEmail(orderEvent)
-            
             if (isHighValueOrder(orderEvent)) {
                 sendHighValueOrderSms(orderEvent)
             }
-            
-            sendPushNotification(orderEvent)
             
         } catch (ex: Exception) {
             logger.error("Failed to send notifications for order {}: {}", 
@@ -119,17 +104,8 @@ class OrderNotificationConsumer {
         }
     }
     
-    private fun sendOrderConfirmationEmail(orderEvent: OrderEvent) {
-        logger.info("Email sent to customer {} for order {}", 
-            orderEvent.customerId, orderEvent.orderId)
-    }
-    
     private fun sendHighValueOrderSms(orderEvent: OrderEvent) {
         logger.info("SMS sent for high-value order {}", orderEvent.orderId)
-    }
-    
-    private fun sendPushNotification(orderEvent: OrderEvent) {
-        logger.info("Push notification sent for order {}", orderEvent.orderId)
     }
     
     private fun isHighValueOrder(orderEvent: OrderEvent): Boolean {

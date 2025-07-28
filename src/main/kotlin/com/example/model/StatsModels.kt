@@ -18,22 +18,6 @@ data class PeriodStats(
     val orderCount: Long
 )
 
-data class TopOrdersStats(
-    val periodStart: LocalDateTime,
-    val periodEnd: LocalDateTime,
-    val topOrders: List<OrderInfo>,
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    val timestamp: LocalDateTime = LocalDateTime.now()
-)
-
-data class OrderInfo(
-    val orderId: String,
-    val orderAmount: BigDecimal,
-    val customerId: String,
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    val orderTime: LocalDateTime
-)
-
 data class StatsResponse<T>(
     val success: Boolean,
     val data: T?,
