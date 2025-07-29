@@ -1,10 +1,13 @@
 package com.example.avro
 
+import io.confluent.kafka.schemaregistry.avro.AvroSchema
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient
 import org.apache.avro.Schema
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.ApplicationRunner
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component
 import java.io.IOException
@@ -13,7 +16,7 @@ import java.io.IOException
 class OrderEventSchemaManager(
     @Value("\${schema.registry.url:http://localhost:8081}")
     private val schemaRegistryUrl: String
-) {
+) : ApplicationRunner {
     
     private val logger = LoggerFactory.getLogger(OrderEventSchemaManager::class.java)
     private val schemaRegistryClient: SchemaRegistryClient = CachedSchemaRegistryClient(schemaRegistryUrl, 100)
@@ -55,16 +58,43 @@ class OrderEventSchemaManager(
         }
     }
     
-    fun registerSchema(): Int {
+    fun registerSchemaIfNotExists(): Int? {
         return try {
             val subject = "orders-avro-value"
+            
+            // 기존 스키마가 있는지 확인
+            val existingSchemas = try {
+                schemaRegistryClient.getAllVersions(subject)
+            } catch (e: Exception) {
+                logger.info("Subject {} does not exist, will register new schema", subject)
+                emptyList<Int>()
+            }
+            
+            if (existingSchemas.isNotEmpty()) {
+                logger.info("Schema already exists for subject: {} with {} versions", subject, existingSchemas.size)
+                val latestMetadata = schemaRegistryClient.getLatestSchemaMetadata(subject)
+                logger.info("Using existing schema with ID: {}, Version: {}", latestMetadata.id, latestMetadata.version)
+                return latestMetadata.id
+            }
+
             val schema = loadSchemaFromFile("avro/order-entity.avsc")
-            val schemaId = schemaRegistryClient.register(subject, schema)
-            logger.info("Successfully registered schema with ID: {} for subject: {}", schemaId, subject)
+            val avroSchema = AvroSchema(schema)
+            val schemaId = schemaRegistryClient.register(subject, avroSchema)
+            logger.info("Successfully registered new schema with ID: {} for subject: {}", schemaId, subject)
             schemaId
         } catch (e: Exception) {
             logger.error("Failed to register schema", e)
-            throw e
+            null
+        }
+    }
+    
+    override fun run(args: ApplicationArguments?) {
+        logger.info("Starting schema registration on application startup...")
+        val schemaId = registerSchemaIfNotExists()
+        if (schemaId != null) {
+            logger.info("Schema registration completed successfully with ID: {}", schemaId)
+        } else {
+            logger.warn("Schema registration failed or was skipped")
         }
     }
 

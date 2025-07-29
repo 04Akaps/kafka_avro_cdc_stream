@@ -17,12 +17,10 @@ class KafkaStreamConfig(private val kafkaProperties: KafkaProperties) {
     @Bean("defaultKafkaStreamsConfig")
     fun defaultKafkaStreamsConfig(): KafkaStreamsConfiguration {
         val props = kafkaProperties.streams.buildProperties(null)
-        
-        // Ensure default serdes are properly set
+
         props[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.String()::class.java
         props[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = Serdes.String()::class.java
-        
-        // Disable RackAwareTaskAssignor completely
+
         props["rack.aware.assignment.strategy"] = "none"
         
         return KafkaStreamsConfiguration(props)

@@ -15,7 +15,8 @@ java {
 repositories {
     mavenCentral()
     maven {
-        url = uri("https://packages.confluent.io/maven/")
+        url = uri("http://packages.confluent.io/maven/")
+        isAllowInsecureProtocol = true
     }
 }
 
